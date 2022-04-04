@@ -5,8 +5,6 @@
 #define ledRed_pin 19
 #define buzzer_pin 2
 
-
-
 void buzzer(int frequency, int duration, int pause, int times){
   for(int time=1; time<=times; time++){
     ledcWriteTone(0,frequency);
@@ -15,7 +13,6 @@ void buzzer(int frequency, int duration, int pause, int times){
     delay(pause);
   }
 }
-
 
 void wifiConnect(){
   const char* ssid="Jentayu-VTOL";
@@ -33,8 +30,6 @@ void wifiConnect(){
   buzzer(2700,100,100,2);
 }
 
-
-
 void checkInternetConnection(){
   while (!Ping.ping("8.8.8.8",2)){
     digitalWrite(ledRed_pin,HIGH);
@@ -44,7 +39,7 @@ void checkInternetConnection(){
     delay(500);
     if(WiFi.status()!=WL_CONNECTED){
       break;
-  }
+    }
   }
   digitalWrite(ledRed_pin,LOW);
   digitalWrite(ledYellow_pin,HIGH);
