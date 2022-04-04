@@ -12,4 +12,4 @@
 
 A core runtime for Cloud-based Monoxide Device.
 
-> Written in [C++](https://isocpp.org) using [Platform IO](https://platformio.org).
+> Written in [C++](https://isocpp.org) using [PlatformIO](https://platformio.org).
