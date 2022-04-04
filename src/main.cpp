@@ -14,35 +14,58 @@ void buzzer(int frequency, int duration, int pause, int times){
   }
 }
 
-void wifiConnect(){
-  const char* ssid="Jentayu-VTOL";
-  const char* passwd="vtoljuara";
-  WiFi.begin(ssid,passwd);
-  while (WiFi.status()!=WL_CONNECTED){
-    digitalWrite(ledRed_pin,HIGH);
-    digitalWrite(ledYellow_pin,HIGH);
-    buzzer(2700,100,200,1);
-    digitalWrite(ledYellow_pin,LOW);
-    delay(300);
-  }
-  digitalWrite(ledRed_pin,LOW);
-  digitalWrite(ledYellow_pin,HIGH);
-  buzzer(2700,100,100,2);
-}
 
-void checkInternetConnection(){
-  while (!Ping.ping("8.8.8.8",2)){
-    digitalWrite(ledRed_pin,HIGH);
-    digitalWrite(ledYellow_pin,HIGH);
-    buzzer(2700,100,0,1);
-    digitalWrite(ledYellow_pin,LOW);
-    delay(500);
+void internetConnection(){
+  while (true){
     if(WiFi.status()!=WL_CONNECTED){
+      const char* ssid="Jentayu-VTOL";
+      const char* passwd="vtoljuara";
+      WiFi.begin(ssid,passwd);
+      while (WiFi.status()!=WL_CONNECTED){
+        digitalWrite(ledRed_pin,HIGH);
+        digitalWrite(ledYellow_pin,HIGH);
+        buzzer(2700,100,200,1);
+        digitalWrite(ledYellow_pin,LOW);
+        delay(300);
+      }
+      digitalWrite(ledRed_pin,LOW);
+      digitalWrite(ledYellow_pin,HIGH);
+      buzzer(2700,100,100,2);
+    }
+    else if (!Ping.ping("8.8.8.8",2)){
+      digitalWrite(ledRed_pin,HIGH);
+      digitalWrite(ledYellow_pin,HIGH);
+      buzzer(2700,100,0,1);
+      digitalWrite(ledYellow_pin,LOW);
+      delay(500);
+      if(WiFi.status()!=WL_CONNECTED){
+        continue;
+      }
+    }
+    else{
+      digitalWrite(ledRed_pin,LOW);
+      digitalWrite(ledYellow_pin,HIGH);
       break;
     }
+
   }
+
+}
+
+void alertOn(){
+  digitalWrite(ledYellow_pin,LOW);
+  digitalWrite(ledRed_pin,HIGH);
+  buzzer(1000,100,50,1);
   digitalWrite(ledRed_pin,LOW);
+  delay(50);
+}
+
+void alertOff(){
   digitalWrite(ledYellow_pin,HIGH);
+  digitalWrite(ledRed_pin,HIGH);
+  buzzer(1000,1000,50,1);
+  digitalWrite(ledRed_pin,LOW);
+  buzzer(2700,100,50,3);
 }
 
 void setup() {
@@ -80,10 +103,11 @@ void setup() {
 
 
 void loop() {
-  if(WiFi.status()!=WL_CONNECTED){
-    wifiConnect();
+  internetConnection();
+  for(int i=1;i<=20;i++){
+    alertOn();
   }
-  checkInternetConnection();
-    
+  alertOff();
+  delay(5000);
   
 }
