@@ -22,11 +22,13 @@ void wifiConnect(){
   const char* passwd="vtoljuara";
   WiFi.begin(ssid,passwd);
   while (WiFi.status()!=WL_CONNECTED){
+    digitalWrite(ledRed_pin,HIGH);
     digitalWrite(ledYellow_pin,HIGH);
-    delay(300);
+    buzzer(2700,100,200,1);
     digitalWrite(ledYellow_pin,LOW);
     delay(300);
   }
+  digitalWrite(ledRed_pin,LOW);
   digitalWrite(ledYellow_pin,HIGH);
   buzzer(2700,100,100,2);
 }
@@ -34,12 +36,17 @@ void wifiConnect(){
 
 
 void checkInternetConnection(){
-  while (!Ping.ping("google.com",2)){
+  while (!Ping.ping("8.8.8.8",2)){
+    digitalWrite(ledRed_pin,HIGH);
     digitalWrite(ledYellow_pin,HIGH);
     buzzer(2700,100,0,1);
     digitalWrite(ledYellow_pin,LOW);
     delay(500);
+    if(WiFi.status()!=WL_CONNECTED){
+      break;
   }
+  }
+  digitalWrite(ledRed_pin,LOW);
   digitalWrite(ledYellow_pin,HIGH);
 }
 
@@ -58,7 +65,10 @@ void setup() {
 
 
   //Finish startup sign
-    for (int i=0; i<=15; i++){
+    buzzer(2700,100,0,1);
+    buzzer(1650,100,0,1);
+    buzzer(2700,100,0,1);
+    for (int i=0; i<=10; i++){
       digitalWrite(ledYellow_pin,HIGH);
       digitalWrite(ledRed_pin,LOW);
       delay(150);
@@ -68,10 +78,7 @@ void setup() {
     }
     digitalWrite(ledYellow_pin,LOW);
     digitalWrite(ledRed_pin,LOW);
-    buzzer(2700,100,0,1);
-    buzzer(1650,100,0,1);
-    buzzer(2700,100,0,1);
-    delay(500);
+
 }
 
 
