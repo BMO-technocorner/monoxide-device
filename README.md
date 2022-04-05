@@ -10,6 +10,6 @@
 
 ## :pager: Monoxide Device
 
-A core runtime for Cloud-based Monoxide Device. Designed with love for [ESP32 SoC](https://www.espressif.com/en/products/socs/esp32).
+A core runtime for Cloud-based Monoxide Device. Designed for [ESP32 SoC](https://www.espressif.com/en/products/socs/esp32).
 
 > Written in [C++](https://isocpp.org) using [PlatformIO](https://platformio.org).
