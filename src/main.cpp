@@ -1,9 +1,12 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ESP32Ping.h>
-#define ledYellow_pin 18
-#define ledRed_pin 19
-#define buzzer_pin 2
+# define mq2_pin 34
+#define ledYellow_pin 32
+#define ledRed_pin 25
+#define buzzer_pin 27
+
+
 
 void buzzer(int frequency, int duration, int pause, int times){
   for(int time=1; time<=times; time++){
@@ -13,7 +16,6 @@ void buzzer(int frequency, int duration, int pause, int times){
     delay(pause);
   }
 }
-
 
 void internetConnection(){
   while (true){
@@ -47,26 +49,43 @@ void internetConnection(){
       digitalWrite(ledYellow_pin,HIGH);
       break;
     }
+  }
+}
 
+int getSensorValue(){
+  int sensor_datas=0;
+  for (int i=0;i<=30;i++){
+    sensor_datas+=analogRead(mq2_pin);
+  }
+  return sensor_datas/30;
+}
+
+void alert(){
+  digitalWrite(ledYellow_pin,LOW);
+  while (true){
+    digitalWrite(ledYellow_pin,LOW);
+    digitalWrite(ledRed_pin,HIGH);
+    buzzer(1000,100,50,1);
+    digitalWrite(ledRed_pin,LOW);
+    delay(50);
+    if(getSensorValue()<=1500){
+      digitalWrite(ledYellow_pin,HIGH);
+      digitalWrite(ledRed_pin,HIGH);
+      buzzer(1000,1000,50,1);
+      digitalWrite(ledRed_pin,LOW);
+      buzzer(2700,100,50,3);
+      break;
+    }
   }
 
+
+  //digitalWrite(ledYellow_pin,HIGH);
+  //digitalWrite(ledRed_pin,HIGH);
+  //buzzer(1000,1000,50,1);
+  //digitalWrite(ledRed_pin,LOW);
+  //buzzer(2700,100,50,3);
 }
 
-void alertOn(){
-  digitalWrite(ledYellow_pin,LOW);
-  digitalWrite(ledRed_pin,HIGH);
-  buzzer(1000,100,50,1);
-  digitalWrite(ledRed_pin,LOW);
-  delay(50);
-}
-
-void alertOff(){
-  digitalWrite(ledYellow_pin,HIGH);
-  digitalWrite(ledRed_pin,HIGH);
-  buzzer(1000,1000,50,1);
-  digitalWrite(ledRed_pin,LOW);
-  buzzer(2700,100,50,3);
-}
 
 void setup() {
   // Setup pin mode
@@ -80,7 +99,6 @@ void setup() {
   
   // Initizlize WiFi
   WiFi.mode(WIFI_STA);
-
 
   //Finish startup sign
     buzzer(2700,100,0,1);
@@ -97,17 +115,16 @@ void setup() {
     digitalWrite(ledYellow_pin,LOW);
     digitalWrite(ledRed_pin,LOW);
 
+    //serial
+    Serial.begin(9600);
+
 }
-
-
-
 
 void loop() {
   internetConnection();
-  for(int i=1;i<=20;i++){
-    alertOn();
+
+  if (getSensorValue()>1500){
+    alert();
   }
-  alertOff();
-  delay(5000);
-  
+
 }
