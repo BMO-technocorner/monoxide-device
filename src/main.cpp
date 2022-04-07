@@ -1,74 +1,69 @@
 #include <Arduino.h>
-#include <WiFi.h>
-#include <ESP32Ping.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
+#include <ESP32Ping.h>
 #define mq2_pin 34
 #define ledYellow_pin 32
 #define ledRed_pin 25
 #define buzzer_pin 27
 
-WiFiClient wifi;
+WiFiClientSecure wifi;
 HTTPClient http;
 
-// boolean getServerResponse()
-// {
-//   if (http.connected() || http.available())
-//   {
-//     Serial.print(F("response code: "));
-//     Serial.println(http.responseStatusCode());
+const char *ca_cert =
+    "-----BEGIN CERTIFICATE-----\n"
+    "MIIEFTCCAv2gAwIBAgIUXZHljUhf107B3AkAH9is4HxbfLswDQYJKoZIhvcNAQEL\n"
+    "BQAwgagxCzAJBgNVBAYTAlVTMRMwEQYDVQQIEwpDYWxpZm9ybmlhMRYwFAYDVQQH\n"
+    "Ew1TYW4gRnJhbmNpc2NvMRkwFwYDVQQKExBDbG91ZGZsYXJlLCBJbmMuMRswGQYD\n"
+    "VQQLExJ3d3cuY2xvdWRmbGFyZS5jb20xNDAyBgNVBAMTK01hbmFnZWQgQ0EgNDlk\n"
+    "N2Q2OTU1MGYwY2MzMDczMmExYjhmODM5MjJmY2YwHhcNMjIwNDA3MDUzMDAwWhcN\n"
+    "MzIwNDA0MDUzMDAwWjAiMQswCQYDVQQGEwJVUzETMBEGA1UEAxMKQ2xvdWRmbGFy\n"
+    "ZTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL8NMJ9Y3T5osO0rNeB9\n"
+    "fNakbq0dlku3pTf/ggPo7fNb4xEaBACQRAgfmUg5ENN7R0z9vp9JABj0OU8FnpdP\n"
+    "pPqzrjVag1A2BPSnhEMJL0TEkOemkkZr7efHTbjSuaoRg5jh8u/sDN86N7eFGMJp\n"
+    "5cZKP4fw6BkSSpXh80YmQwvFzlE0KyolKAaK4bacCioi8Bpu+n0IUY6VkIcGCW/I\n"
+    "ah+ePe6WIGIY51mv4MCqtVuW0duuU22G5XsBlfxcSTARm9zN3B1oFvI2ysRWMrfs\n"
+    "FN1jPg2Ww0EcfT1euR+ByJYhSTHrIap7ms6T7rxBX4d1lx5Y+FtFqvV7aWFNVVg4\n"
+    "AIMCAwEAAaOBuzCBuDATBgNVHSUEDDAKBggrBgEFBQcDAjAMBgNVHRMBAf8EAjAA\n"
+    "MB0GA1UdDgQWBBQIVOb0Le3Q19a9VZrTKZdg6KQmIzAfBgNVHSMEGDAWgBReGfcS\n"
+    "aEZyatcDb80HqNmnO5ai3TBTBgNVHR8ETDBKMEigRqBEhkJodHRwOi8vY3JsLmNs\n"
+    "b3VkZmxhcmUuY29tLzc0MjQ2YzE0LTA2MWQtNDBhYi05MDZiLTUzZjliNGE2YWQ4\n"
+    "NS5jcmwwDQYJKoZIhvcNAQELBQADggEBAI+ZSGmhzG54H+hZTr8NvtgrKrJVIIfb\n"
+    "KGR/Qh3htyo/uCbfe9Y0UKrD0cB6YJSaqLh3FR4jynlB0RGmhS2oEg0E36rj6VRB\n"
+    "A1hLac5Wxsbs5CoIgLkoqTmr6PO8Gp3V3L+HHRFsvMNzQxxZ+rOUUWEjZkYySUUX\n"
+    "8DNaIaL50RP+qCN1zPZGFXY+6/PdbWOWR8DDmrTmb7eAMKlXS8PZP3bl0ldj4uB4\n"
+    "E5TzpPkX9ujQj/lYxQ7Kb4pZgsDIMhMbbFqRa09S6dCwc+AU7CHDjLQo3M+NEBkF\n"
+    "XUeXH3ST25knOZrjFeGQaO002hRHGYxhZemK7ZK8ABYOcMfPg6agv1I=\n"
+    "-----END CERTIFICATE-----\n";
 
-//     /**
-//      * uncomment code below to view the response body
-//      *
-//      * const String responseBody = http.responseBody();
-//      * Serial.println(F("response body: "));
-//      * Serial.println(responseBody);
-//      */
-
-//     return http.responseStatusCode() == 200;
-//   }
-//   else
-//   {
-//     Serial.println(F("connection failure"));
-//   }
-//   return false;
-// }
-
-// boolean httpPostRequest(const __FlashStringHelper *path, String body)
-// {
-//   Serial.print(F("sending HTTP POST request to "));
-//   Serial.println(path);
-//   http.beginRequest();
-//   http.post(path);
-//   http.sendHeader(F("Accept"), F("application/json"));
-//   http.sendHeader(F("Api-Key"), F("04d5d2f1-0caa-49dd-8293-a3c2466bed78"));
-//   http.sendHeader(F("Device-Key"), F("6e0dcdf1-95a5-4981-96ed-9d2291d7db16"));
-//   http.endRequest();
-//   http.println(body);
-//   http.flush();
-//   boolean response = getServerResponse();
-//   return response;
-// }
+void getReport(String id) {
+  http.begin("https://api-monoxide.ezralazuardy.com/v1/device/report?id=" + id);
+  http.addHeader("Accept", "application/json");
+  http.addHeader("User-Agent", "ESP32");
+  http.addHeader("Api-Key", "04d5d2f1-0caa-49dd-8293-a3c2466bed78");
+  http.addHeader("Device-Key", "6e0dcdf1-95a5-4981-96ed-9d2291d7db16");
+  int httpCode = http.GET();
+  Serial.println();
+  Serial.println(httpCode);
+  Serial.println(http.getString());
+  http.end();
+  delay(2000);
+}
 
 void synchronize()
 {
-  // httpPostRequest(F("https://api-monoxide.ezralazuardy.com/v1/device/sync"), String(""));
-  if ((WiFi.status() == WL_CONNECTED))
-  {
-    http.begin("http://jsonplaceholder.typicode.com/comments?id=10");
-    int httpCode = http.GET();
-    if (httpCode > 0)
-    {
-      String payload = http.getString();
-      Serial.println(httpCode);
-      Serial.println(payload);
-    }
-    else
-    {
-      Serial.println("Error on HTTP request");
-    }
-    http.end();
-  }
+  http.begin("https://api-monoxide.ezralazuardy.com/v1/device/sync");
+  http.addHeader("Accept", "application/json");
+  http.addHeader("Content-Type", "application/json");
+  http.addHeader("User-Agent", "ESP32");
+  http.addHeader("Api-Key", "04d5d2f1-0caa-49dd-8293-a3c2466bed78");
+  http.addHeader("Device-Key", "6e0dcdf1-95a5-4981-96ed-9d2291d7db16");
+  int httpCode = http.POST("");
+  Serial.println();
+  Serial.println(httpCode);
+  Serial.println(http.getString());
+  http.end();
+  delay(2000);
 }
 
 void buzzer(int frequency, int duration, int pause, int times)
@@ -119,6 +114,7 @@ void internetConnection()
     {
       digitalWrite(ledRed_pin, LOW);
       digitalWrite(ledYellow_pin, HIGH);
+      wifi.setCACert(ca_cert);
       break;
     }
   }
