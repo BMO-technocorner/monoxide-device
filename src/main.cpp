@@ -39,7 +39,7 @@ const char *ca_cert =
     "E5TzpPkX9ujQj/lYxQ7Kb4pZgsDIMhMbbFqRa09S6dCwc+AU7CHDjLQo3M+NEBkF\n"
     "XUeXH3ST25knOZrjFeGQaO002hRHGYxhZemK7ZK8ABYOcMfPg6agv1I=\n"
     "-----END CERTIFICATE-----\n";
-b
+
 void saveReport(int level)
 {
   if (WiFi.status() != WL_CONNECTED)
