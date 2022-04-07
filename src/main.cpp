@@ -2,13 +2,17 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ESP32Ping.h>
+
 #define mq2_pin 34
 #define ledYellow_pin 32
 #define ledRed_pin 25
 #define buzzer_pin 27
+#define SYNC_DELAY 60000
 
 WiFiClientSecure wifi;
 HTTPClient http;
+uint32_t lastSyncMillis;
+bool bootSync;
 
 const char *ca_cert =
     "-----BEGIN CERTIFICATE-----\n"
@@ -35,35 +39,45 @@ const char *ca_cert =
     "E5TzpPkX9ujQj/lYxQ7Kb4pZgsDIMhMbbFqRa09S6dCwc+AU7CHDjLQo3M+NEBkF\n"
     "XUeXH3ST25knOZrjFeGQaO002hRHGYxhZemK7ZK8ABYOcMfPg6agv1I=\n"
     "-----END CERTIFICATE-----\n";
-
-void getReport(String id) {
-  http.begin("https://api-monoxide.ezralazuardy.com/v1/device/report?id=" + id);
+b
+void saveReport(int level)
+{
+  if (WiFi.status() != WL_CONNECTED)
+    return;
+  http.begin("https://api-monoxide.ezralazuardy.com/v1/device/report");
   http.addHeader("Accept", "application/json");
+  http.addHeader("Content-Type", "application/json");
   http.addHeader("User-Agent", "ESP32");
   http.addHeader("Api-Key", "04d5d2f1-0caa-49dd-8293-a3c2466bed78");
   http.addHeader("Device-Key", "6e0dcdf1-95a5-4981-96ed-9d2291d7db16");
-  int httpCode = http.GET();
   Serial.println();
-  Serial.println(httpCode);
+  Serial.println(http.POST("{\"detectionLevel\": " + String(level) + "}"));
   Serial.println(http.getString());
   http.end();
-  delay(2000);
 }
 
 void synchronize()
 {
+  uint32_t currentMillis = millis();
+  if (bootSync)
+  {
+    if (currentMillis - lastSyncMillis < SYNC_DELAY)
+      return;
+    lastSyncMillis = currentMillis;
+  }
+  bootSync = true;
+  if (WiFi.status() != WL_CONNECTED)
+    return;
   http.begin("https://api-monoxide.ezralazuardy.com/v1/device/sync");
   http.addHeader("Accept", "application/json");
   http.addHeader("Content-Type", "application/json");
   http.addHeader("User-Agent", "ESP32");
   http.addHeader("Api-Key", "04d5d2f1-0caa-49dd-8293-a3c2466bed78");
   http.addHeader("Device-Key", "6e0dcdf1-95a5-4981-96ed-9d2291d7db16");
-  int httpCode = http.POST("");
   Serial.println();
-  Serial.println(httpCode);
+  Serial.println(http.POST("{}"));
   Serial.println(http.getString());
   http.end();
-  delay(2000);
 }
 
 void buzzer(int frequency, int duration, int pause, int times)
@@ -97,6 +111,7 @@ void internetConnection()
       digitalWrite(ledRed_pin, LOW);
       digitalWrite(ledYellow_pin, HIGH);
       buzzer(2700, 100, 100, 2);
+      Serial.println("\nConnecting to wireless network.");
     }
     else if (!Ping.ping("8.8.8.8", 2))
     {
@@ -105,6 +120,7 @@ void internetConnection()
       buzzer(2700, 100, 0, 1);
       digitalWrite(ledYellow_pin, LOW);
       delay(500);
+      Serial.println("\nIntenet connection is unavailable!");
       if (WiFi.status() != WL_CONNECTED)
       {
         continue;
@@ -114,7 +130,8 @@ void internetConnection()
     {
       digitalWrite(ledRed_pin, LOW);
       digitalWrite(ledYellow_pin, HIGH);
-      wifi.setCACert(ca_cert);
+      Serial.println("\nIntenet connection is available!");
+      synchronize();
       break;
     }
   }
@@ -122,16 +139,63 @@ void internetConnection()
 
 int getSensorValue()
 {
-  int sensor_datas = 0;
+  int sensorValue = 0;
   for (int i = 0; i <= 30; i++)
   {
-    sensor_datas += analogRead(mq2_pin);
+    sensorValue += analogRead(mq2_pin);
   }
-  return sensor_datas / 30;
+  return sensorValue / 30;
 }
 
-void alert()
+void alertLow()
 {
+  saveReport(1);
+  digitalWrite(ledYellow_pin, LOW);
+  while (true)
+  {
+    digitalWrite(ledYellow_pin, LOW);
+    digitalWrite(ledRed_pin, HIGH);
+    buzzer(1000, 100, 50, 1);
+    digitalWrite(ledRed_pin, LOW);
+    delay(50);
+    if (getSensorValue() <= 1500)
+    {
+      digitalWrite(ledYellow_pin, HIGH);
+      digitalWrite(ledRed_pin, HIGH);
+      buzzer(1000, 1000, 50, 1);
+      digitalWrite(ledRed_pin, LOW);
+      buzzer(2700, 100, 50, 3);
+      break;
+    }
+  }
+}
+
+void alertMedium()
+{
+  saveReport(2);
+  digitalWrite(ledYellow_pin, LOW);
+  while (true)
+  {
+    digitalWrite(ledYellow_pin, LOW);
+    digitalWrite(ledRed_pin, HIGH);
+    buzzer(1000, 100, 50, 1);
+    digitalWrite(ledRed_pin, LOW);
+    delay(50);
+    if (getSensorValue() <= 1500)
+    {
+      digitalWrite(ledYellow_pin, HIGH);
+      digitalWrite(ledRed_pin, HIGH);
+      buzzer(1000, 1000, 50, 1);
+      digitalWrite(ledRed_pin, LOW);
+      buzzer(2700, 100, 50, 3);
+      break;
+    }
+  }
+}
+
+void alertHigh()
+{
+  saveReport(3);
   digitalWrite(ledYellow_pin, LOW);
   while (true)
   {
@@ -164,6 +228,7 @@ void setup()
   ledcAttachPin(buzzer_pin, 0);
 
   // Initizlize WiFi
+  wifi.setCACert(ca_cert);
   WiFi.mode(WIFI_STA);
 
   // Finish startup sign
@@ -184,14 +249,17 @@ void setup()
 
   // serial
   Serial.begin(9600);
+  Serial.println();
 }
 
 void loop()
 {
   internetConnection();
-  synchronize();
-  // if (getSensorValue() > 1500)
-  //{
-  //   alert();
-  // }
+  int sensorValue = getSensorValue();
+  if (sensorValue >= 1500 && sensorValue < 2500)
+    alertLow();
+  else if (sensorValue >= 2500 && sensorValue < 3500)
+    alertMedium();
+  else if (sensorValue >= 3500)
+    alertHigh();
 }
