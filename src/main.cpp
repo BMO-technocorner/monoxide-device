@@ -8,11 +8,18 @@
 #define ledRed_pin 25
 #define buzzer_pin 27
 #define SYNC_DELAY 60000
+#define LOW_DETECTION_DELAY 10000
+#define HIGH_DETECTION_DELAY 20000
+#define LOW_DETECTION_SENSITIVITY_START 1500
+#define LOW_DETECTION_SENSITIVITY_END 3000
+#define HIGH_DETECTION_SENSITIVITY_START 3000
 
 WiFiClientSecure wifi;
 HTTPClient http;
+uint32_t lastDetectionMillis;
 uint32_t lastSyncMillis;
 bool bootSync;
+bool reported;
 
 const char *ca_cert =
     "-----BEGIN CERTIFICATE-----\n"
@@ -44,6 +51,7 @@ void saveReport(int level)
 {
   if (WiFi.status() != WL_CONNECTED)
     return;
+  Serial.println("\nGas detected. Saving report...");
   http.begin("https://api-monoxide.ezralazuardy.com/v1/device/report");
   http.addHeader("Accept", "application/json");
   http.addHeader("Content-Type", "application/json");
@@ -68,6 +76,7 @@ void synchronize()
   bootSync = true;
   if (WiFi.status() != WL_CONNECTED)
     return;
+  Serial.println("\nSynchronizing...");
   http.begin("https://api-monoxide.ezralazuardy.com/v1/device/sync");
   http.addHeader("Accept", "application/json");
   http.addHeader("Content-Type", "application/json");
@@ -129,7 +138,7 @@ void internetConnection()
     else
     {
       digitalWrite(ledRed_pin, LOW);
-      digitalWrite(ledYellow_pin, HIGH);
+      digitalWrite(ledYellow_pin, LOW);
       Serial.println("\nIntenet connection is available!");
       synchronize();
       break;
@@ -149,40 +158,24 @@ int getSensorValue()
 
 void alertLow()
 {
-  saveReport(1);
+  uint32_t lastDetectionMillis = millis();
   digitalWrite(ledYellow_pin, LOW);
   while (true)
   {
     digitalWrite(ledYellow_pin, LOW);
     digitalWrite(ledRed_pin, HIGH);
-    buzzer(1000, 100, 50, 1);
-    digitalWrite(ledRed_pin, LOW);
-    delay(50);
-    if (getSensorValue() <= 1500)
+    if (!reported)
     {
-      digitalWrite(ledYellow_pin, HIGH);
-      digitalWrite(ledRed_pin, HIGH);
-      buzzer(1000, 1000, 50, 1);
-      digitalWrite(ledRed_pin, LOW);
-      buzzer(2700, 100, 50, 3);
-      break;
+      ledcWriteTone(0, 1000);
+      saveReport(1);
+      ledcWriteTone(0, 0);
+      reported = true;
     }
-  }
-}
-
-void alertMedium()
-{
-  saveReport(2);
-  digitalWrite(ledYellow_pin, LOW);
-  while (true)
-  {
-    digitalWrite(ledYellow_pin, LOW);
-    digitalWrite(ledRed_pin, HIGH);
-    buzzer(1000, 100, 50, 1);
+    buzzer(1000, 600, 50, 1);
     digitalWrite(ledRed_pin, LOW);
-    delay(50);
-    if (getSensorValue() <= 1500)
+    if (getSensorValue() < 1500 && millis() - lastDetectionMillis >= LOW_DETECTION_DELAY)
     {
+      reported = false;
       digitalWrite(ledYellow_pin, HIGH);
       digitalWrite(ledRed_pin, HIGH);
       buzzer(1000, 1000, 50, 1);
@@ -195,17 +188,24 @@ void alertMedium()
 
 void alertHigh()
 {
-  saveReport(3);
+  uint32_t lastDetectionMillis = millis();
   digitalWrite(ledYellow_pin, LOW);
   while (true)
   {
     digitalWrite(ledYellow_pin, LOW);
     digitalWrite(ledRed_pin, HIGH);
+    if (!reported)
+    {
+      ledcWriteTone(0, 1000);
+      saveReport(2);
+      ledcWriteTone(0, 0);
+      reported = true;
+    }
     buzzer(1000, 100, 50, 1);
     digitalWrite(ledRed_pin, LOW);
-    delay(50);
-    if (getSensorValue() <= 1500)
+    if (getSensorValue() < 1500 && millis() - lastDetectionMillis >= HIGH_DETECTION_DELAY)
     {
+      reported = false;
       digitalWrite(ledYellow_pin, HIGH);
       digitalWrite(ledRed_pin, HIGH);
       buzzer(1000, 1000, 50, 1);
@@ -256,10 +256,10 @@ void loop()
 {
   internetConnection();
   int sensorValue = getSensorValue();
-  if (sensorValue >= 1500 && sensorValue < 2500)
+  Serial.println("\nSensor value: " + String(sensorValue));
+  if (sensorValue >= LOW_DETECTION_SENSITIVITY_START && sensorValue < LOW_DETECTION_SENSITIVITY_END)
     alertLow();
-  else if (sensorValue >= 2500 && sensorValue < 3500)
-    alertMedium();
-  else if (sensorValue >= 3500)
+  else if (sensorValue >= HIGH_DETECTION_SENSITIVITY_START)
     alertHigh();
+  delay(1000);
 }
