@@ -12,4 +12,4 @@
 
 A core runtime for Cloud-based Monoxide Device. Designed for [ESP32 SoC](https://www.espressif.com/en/products/socs/esp32).
 
-> Written in [C++](https://isocpp.org) using [PlatformIO](https://platformio.org).
+> Written in [C++](https://isocpp.org) and [Python](https://www.python.org) using [PlatformIO](https://platformio.org).
