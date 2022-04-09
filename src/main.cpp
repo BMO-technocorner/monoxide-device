@@ -16,7 +16,10 @@
 #define LOW_DETECTION_SENSITIVITY_START 1500
 #define LOW_DETECTION_SENSITIVITY_END 3000
 #define HIGH_DETECTION_SENSITIVITY_START 3000
+#define PING_DNS "8.8.8.8"
 
+const char* wifi_ssid = ENV(WIFI_SSID);
+const char* wifi_password = ENV(WIFI_PASSWORD);
 const char* ca_cert = ENV(CA_CERT);
 const char* api_key = ENV(API_KEY);
 const char* device_key = ENV(DEVICE_KEY);
@@ -88,9 +91,7 @@ void internetConnection()
   {
     if (WiFi.status() != WL_CONNECTED)
     {
-      const char *ssid = "Jentayu-VTOL";
-      const char *passwd = "vtoljuara";
-      WiFi.begin(ssid, passwd);
+      WiFi.begin(wifi_ssid, wifi_password);
       while (WiFi.status() != WL_CONNECTED)
       {
         digitalWrite(LED_RED_PIN, HIGH);
@@ -104,7 +105,7 @@ void internetConnection()
       buzzer(2700, 100, 100, 2);
       Serial.println("\nConnecting to wireless network.");
     }
-    else if (!Ping.ping("8.8.8.8", 2))
+    else if (!Ping.ping(PING_DNS, 2))
     {
       digitalWrite(LED_RED_PIN, HIGH);
       digitalWrite(LED_YELLOW_PIN, HIGH);
